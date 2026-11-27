@@ -40,8 +40,11 @@ function showView(id) {
 async function refresh() {
   st = await api.status();
   const sky = st.skyrim;
-  if (sky.error) setCheck("chk-skyrim", "err", sky.error);
-  else if (!sky.versionOk && !st.gameVersionOk) setCheck("chk-skyrim", "err", `version ${sky.version || "?"} (${st.requiredVersion} requise)`);
+  const dl = `la ${st.requiredVersion} sera téléchargée via Steam (~${fmtBytes(st.downloadBytes)})`;
+  if (sky.error && !st.canDownload) setCheck("chk-skyrim", "err", sky.error);
+  else if (sky.error && !st.gameVersionOk) setCheck("chk-skyrim", "warn", `non installé : ${dl}`);
+  else if (!sky.versionOk && !st.gameVersionOk) setCheck("chk-skyrim", "warn", `version ${sky.version || "?"} : ${dl}`);
+  else if (sky.error || !sky.versionOk) setCheck("chk-skyrim", "ok", `version ${st.requiredVersion} (copie FusPvP)`);
   else if (sky.language && sky.language !== "french") setCheck("chk-skyrim", "warn", `${st.requiredVersion} - jeu en ${sky.language} (français conseillé)`);
   else setCheck("chk-skyrim", "ok", `version ${st.requiredVersion}`);
 
@@ -69,7 +72,8 @@ function updateMainButton() {
     b.disabled = true;
     return;
   }
-  const skyOk = !st.skyrim.error && (st.skyrim.versionOk || st.gameVersionOk);
+  // Steam suffit : la 1.6.1170 est copiée depuis Steam ou téléchargée par ses dépôts.
+  const skyOk = st.canDownload || (!st.skyrim.error && (st.skyrim.versionOk || st.gameVersionOk));
   if (st.running) {
     b.textContent = "Jeu lancé";
     b.disabled = true;
@@ -103,6 +107,22 @@ api.onProgress((p) => {
       p.done, p.total,
       p.file ? `${p.file} - ${fmtBytes(p.done)} / ${fmtBytes(p.total)}. Ton Skyrim normal n'est pas modifié.` : "",
     );
+    $("btn-main").textContent = `${pct} %`;
+  } else if (p.phase === "depot") {
+    const pct = p.total ? Math.floor((p.done / p.total) * 100) : 0;
+    showProgress(
+      p.waiting
+        ? `Skyrim ${st ? st.requiredVersion : "1.6.1170"} : Steam prépare le téléchargement (${p.index}/${p.count})...`
+        : `Téléchargement de Skyrim ${st ? st.requiredVersion : "1.6.1170"} via Steam (${p.index}/${p.count}, ${p.label}) : ${pct} %`,
+      p.done, p.total,
+      p.waiting
+        ? "Steam va s'ouvrir avec sa console : connecte-toi avec le compte qui possède Skyrim Special Edition et laisse Steam ouvert."
+        : `${fmtBytes(p.done)} / ${fmtBytes(p.total)}. Garde Steam ouvert. Ton Skyrim Steam n'est pas modifié.`,
+    );
+    $("btn-main").textContent = p.waiting ? "Steam..." : `${pct} %`;
+  } else if (p.phase === "move") {
+    const pct = p.total ? Math.floor((p.done / p.total) * 100) : 0;
+    showProgress(`Installation des fichiers de Skyrim : ${pct} %`, p.done, p.total, p.file || "");
     $("btn-main").textContent = `${pct} %`;
   } else if (p.phase === "update") {
     if (p.checking) {
@@ -145,13 +165,15 @@ api.onProgress((p) => {
 async function runInstall(auto) {
   working = true;
   updateMainButton();
-  setMessage(auto === true ? "" : "Installation de FusPvP. Les fichiers de Skyrim sont copiés dans un dossier à part : ton Skyrim normal reste jouable.");
+  setMessage(auto === true ? "" : st && !st.skyrim.versionOk && !st.gameVersionOk
+    ? `Installation de FusPvP : Skyrim ${st.requiredVersion} est téléchargé via Steam dans un dossier à part. Ton Skyrim Steam n'est pas modifié.`
+    : "Installation de FusPvP. Les fichiers de Skyrim sont copiés dans un dossier à part : ton Skyrim normal reste jouable.");
   const r = await api.install();
   working = false;
   if (r.ok) {
     ready = true;
     setCheck("chk-game", "ok", r.result.updated ? `à jour (${r.result.updated} fichier(s) mis à jour)` : "à jour");
-    setMessage("");
+    setMessage((r.result.warnings || []).join(" "));
   } else {
     setCheck("chk-game", "err", "erreur");
     setMessage("Installation impossible : " + r.error, true);

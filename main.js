@@ -36,14 +36,18 @@ function send(channel, data) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, data);
 }
 
-/** Dossier du jeu FusPvP : réglage du joueur, sinon à côté du Skyrim Steam. */
+/**
+ * Dossier du jeu FusPvP : réglage du joueur, sinon à côté du Skyrim Steam
+ * (ou dans la bibliothèque principale de Steam si Skyrim n'est pas installé).
+ */
 function gameDirFor(s, sky) {
   if (s.gameDir) return s.gameDir;
-  if (sky && sky.library) {
-    const dir = path.join(sky.library, "steamapps", "common", steam.FUSPVP_FOLDER);
+  const library = sky && (sky.library || sky.steam);
+  if (library) {
+    const dir = path.join(library, "steamapps", "common", steam.FUSPVP_FOLDER);
     // Ancien nom du projet (FusRP) : le dossier du jeu est renommé une fois,
     // sans recopier les 15 Go de Skyrim.
-    const old = path.join(sky.library, "steamapps", "common", "Skyrim Special Edition - FusRP");
+    const old = path.join(library, "steamapps", "common", "Skyrim Special Edition - FusRP");
     if (!fs.existsSync(dir) && fs.existsSync(old)) {
       try {
         fs.renameSync(old, dir);
@@ -101,8 +105,12 @@ async function status() {
   if (gameDir && sky.dir && sky.versionOk) {
     missingBytes = install.missingBaseFiles(sky.dir, gameDir).reduce((t, f) => t + f.size, 0);
   }
+  const depots = steam.depotsFor(await gameLanguage());
   return {
     skyrim: sky,
+    // Skyrim 1.6.1170 téléchargeable par les dépôts Steam (Steam installé).
+    canDownload: !!sky.steam,
+    downloadBytes: depots.reduce((t, d) => t + d.approxBytes, 0),
     requiredVersion: steam.REQUIRED_VERSION,
     gameDir,
     gameVersion,
@@ -146,29 +154,118 @@ async function waitForGameWindow() {
   }
 }
 
+/** Langue du jeu à installer : celle de Steam ("french"...), sinon anglais. */
+let cachedLanguage;
+async function gameLanguage() {
+  if (cachedLanguage === undefined) cachedLanguage = await steam.steamLanguage();
+  return cachedLanguage;
+}
+
+/** Sans signe de vie de Steam pendant ce délai, le téléchargement est abandonné. */
+const DEPOT_START_TIMEOUT_MS = 3 * 60 * 1000;
+const DEPOT_STALL_TIMEOUT_MS = 15 * 60 * 1000;
+
 /**
- * Installe ou met à jour : fichiers d'origine depuis Steam (si besoin) puis
- * fichiers FusPvP depuis le serveur. Progression envoyée sur "progress".
+ * Télécharge Skyrim SE 1.6.1170 par les dépôts Steam (voir lib/steam.js) puis
+ * déplace ses fichiers d'origine dans le dossier FusPvP. Le Skyrim Steam du
+ * joueur, s'il existe, n'est pas modifié. Renvoie les avertissements éventuels.
+ */
+async function installSkyrim1170(sky, gameDir) {
+  const language = await gameLanguage();
+  const depots = steam.depotsFor(language);
+  const warnings = [];
+  // Place disque : les dépôts arrivent dans le dossier de Steam, puis sont déplacés.
+  const missing = depots.filter((d) => !fs.existsSync(steam.depotDir(sky.steam, d)));
+  const need = missing.reduce((t, d) => t + d.approxBytes, 0) + 1e9;
+  try {
+    const fsInfo = fs.statfsSync(sky.steam);
+    const free = fsInfo.bavail * fsInfo.bsize;
+    if (free < need) {
+      throw new Error(`place insuffisante sur le disque de Steam : ${Math.ceil(need / 1e9)} Go nécessaires, ${Math.floor(free / 1e9)} Go libres`);
+    }
+  } catch (e) {
+    if (/place insuffisante/.test(e.message)) throw e; // statfs indisponible : on tente quand même
+  }
+
+  const ok = [];
+  for (const [i, d] of depots.entries()) {
+    const dir = steam.depotDir(sky.steam, d);
+    const progress = (extra) => send("progress", { phase: "depot", index: i + 1, count: depots.length, label: d.label, ...extra });
+    // Déjà téléchargé (launcher relancé après coup) : rien à refaire.
+    if (fs.existsSync(dir) && steam.depotLogState(sky.steam, d, 0).state === "done" && steam.dirSize(dir) >= d.approxBytes * 0.9) {
+      ok.push(d);
+      continue;
+    }
+    const since = Date.now();
+    progress({ waiting: true, done: 0, total: d.approxBytes });
+    steam.requestDepot(sky.steam, d);
+    let total = d.approxBytes;
+    let lastSize = -1;
+    let lastChange = Date.now();
+    let started = false;
+    for (;;) {
+      await sleep(2000);
+      const log = steam.depotLogState(sky.steam, d, since);
+      if (log.totalBytes) total = log.totalBytes;
+      const size = steam.dirSize(dir);
+      if (log.state === "downloading" || size > 0) started = true;
+      if (log.state === "done") break;
+      let failure = log.state === "failed" ? log.message || "Steam a refusé le téléchargement" : null;
+      if (size !== lastSize) {
+        lastSize = size;
+        lastChange = Date.now();
+      } else if (!started && Date.now() - lastChange > DEPOT_START_TIMEOUT_MS) {
+        failure = "Steam n'a pas commencé le téléchargement";
+      } else if (started && Date.now() - lastChange > DEPOT_STALL_TIMEOUT_MS) {
+        failure = "le téléchargement Steam est bloqué depuis 15 minutes";
+      }
+      if (failure) {
+        if (d.optional) {
+          warnings.push(`${d.label} indisponible (${failure}) : le jeu sera en anglais.`);
+          break;
+        }
+        throw new Error(
+          `${failure} (${d.label}). Ouvre Steam, connecte-toi avec le compte qui possède Skyrim Special Edition, puis clique de nouveau sur Installer.`,
+        );
+      }
+      progress({ waiting: !started, done: Math.min(size, total), total });
+    }
+    if (!warnings.some((w) => w.startsWith(d.label))) ok.push(d);
+  }
+
+  // Dépôt de langue d'abord (il remplace des fichiers anglais), puis l'exécutable, puis les données.
+  const dirs = [...ok].reverse().map((d) => steam.depotDir(sky.steam, d));
+  send("progress", { phase: "move", done: 0, total: 1 });
+  await install.moveBaseFilesFrom(dirs, gameDir, (p) => send("progress", { phase: "move", ...p }));
+  const v = await steam.fileVersion(path.join(gameDir, "SkyrimSE.exe"));
+  if (!v || !v.startsWith(steam.REQUIRED_VERSION + ".")) {
+    throw new Error(`le jeu téléchargé est en version ${v || "inconnue"} au lieu de la ${steam.REQUIRED_VERSION}`);
+  }
+  // Dépôts vidés : on libère la place.
+  for (const d of ok) fs.rmSync(steam.depotDir(sky.steam, d), { recursive: true, force: true });
+  return warnings;
+}
+
+/**
+ * Installe ou met à jour : fichiers d'origine de Skyrim 1.6.1170 (copiés depuis
+ * le Skyrim Steam s'il est dans la bonne version, sinon téléchargés par les
+ * dépôts Steam), puis fichiers FusPvP depuis le serveur. Progression sur "progress".
  */
 async function installOrUpdate() {
   const s = settings.load(CONFIG);
   const sky = await steam.findSkyrim();
-  if (sky.error) throw new Error(sky.error);
+  if (!sky.steam) throw new Error(sky.error || "Steam n'est pas installé sur ce PC.");
   const gameDir = gameDirFor(s, sky);
   if (await isGameRunning()) throw new Error("ferme Skyrim avant la mise à jour");
+  let warnings = [];
   const missing = sky.versionOk ? install.missingBaseFiles(sky.dir, gameDir) : [];
   if (!sky.versionOk) {
-    // Steam a mis Skyrim à jour (ou version inconnue) : on ne recopie pas des
-    // fichiers incompatibles. Le dossier FusPvP déjà installé reste utilisable.
+    // Skyrim Steam absent ou dans une autre version (1.7...) : la 1.6.1170 est
+    // téléchargée par les dépôts Steam, sauf si le dossier FusPvP l'a déjà.
     const v = fs.existsSync(path.join(gameDir, "SkyrimSE.exe"))
       ? await steam.fileVersion(path.join(gameDir, "SkyrimSE.exe"))
       : null;
-    if (!v || !v.startsWith(steam.REQUIRED_VERSION + ".")) {
-      throw new Error(
-        `ton Skyrim Steam est en version ${sky.version || "inconnue"}, FusPvP demande la ${steam.REQUIRED_VERSION}. ` +
-          "Contacte un admin FusPvP sur Discord pour la procédure de rétrogradation.",
-      );
-    }
+    if (!v || !v.startsWith(steam.REQUIRED_VERSION + ".")) warnings = await installSkyrim1170(sky, gameDir);
   }
   if (missing.length) {
     send("progress", { phase: "copy", done: 0, total: 1 });
@@ -176,7 +273,7 @@ async function installOrUpdate() {
   }
   const n = await install.updateFromServer(settings.endpoints(s).web, gameDir, (p) => send("progress", { phase: "update", ...p }));
   send("progress", { phase: "done", updated: n });
-  return { updated: n, copied: missing.length };
+  return { updated: n, copied: missing.length, warnings };
 }
 
 let queueCancelled = false;
@@ -287,7 +384,7 @@ ipcMain.handle("saveSettings", (_e, next) => {
 });
 // Réseaux sociaux du menu du haut : seules ces adresses peuvent être ouvertes.
 const SOCIAL_LINKS = {
-  discord: "https://discord.gg/CKVfRTBHUj",
+  discord: "https://discord.gg/ckmEXCE2mV",
   youtube: "https://www.youtube.com/@FUSPVP",
   tiktok: "https://www.tiktok.com/@fuspvp",
 };

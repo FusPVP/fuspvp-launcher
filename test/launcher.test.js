@@ -71,3 +71,52 @@ test("préréglage : seuls les réglages graphiques changent, le reste du joueur
   assert.match(out, /bDialogueSubtitles=1/);
   assert.match(out, /\[Water\]\r\nbUseWaterReflections=1/);
 });
+
+// ---------------------------------------------------------------------------
+// Dépôts Steam de Skyrim 1.6.1170
+const steam = require("../lib/steam");
+
+test("journal de la console Steam : en cours (taille), terminé, échec", () => {
+  const d = steam.DEPOTS_1170[0];
+  const lines = [
+    `[2026-11-18 10:24:58] ExecCommandLine: ""C:\Steam\steam.exe" -console +download_depot 489830 ${d.id} ${d.manifest}"`,
+    `[2026-11-18 10:25:00] Downloading depot ${d.id} (19 files, 4663 MB) ... `,
+  ];
+  let r = steam.parseDepotLog(lines.join("\n"), d, 0);
+  assert.strictEqual(r.state, "downloading");
+  assert.strictEqual(r.totalBytes, 4663 * 1024 * 1024);
+  lines.push(`[2026-11-18 10:28:29] Depot download complete : "C:\Steam\steamapps\content\app_489830\depot_${d.id}" (manifest ${d.manifest}) `);
+  assert.strictEqual(steam.parseDepotLog(lines.join("\n"), d, 0).state, "done");
+  // Lignes antérieures à la demande ignorées.
+  assert.strictEqual(steam.parseDepotLog(lines.join("\n"), d, Date.parse("2026-11-19T00:00:00")).state, null);
+  // Autre dépôt : pas concerné.
+  assert.strictEqual(steam.parseDepotLog(lines.join("\n"), steam.DEPOTS_1170[1], 0).state, null);
+  // Échec.
+  r = steam.parseDepotLog(`[2026-11-18 10:30:00] Depot download failed : "C:\Steam\steamapps\content\app_489830\depot_${d.id}" (No subscription)`, d, 0);
+  assert.strictEqual(r.state, "failed");
+});
+
+test("dépôts : français ajouté seulement si Steam est en français", () => {
+  assert.deepStrictEqual(steam.depotsFor(null).map((d) => d.id), [489831, 489832, 489833]);
+  assert.deepStrictEqual(steam.depotsFor("french").map((d) => d.id), [489831, 489832, 489833, 489834]);
+});
+
+test("fichiers des dépôts : le premier dossier l'emporte, puis déplacement dans le jeu", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "fuspvp-depots-"));
+  const lang = path.join(root, "depot_lang"), exe = path.join(root, "depot_exe"), data = path.join(root, "depot_data");
+  const game = path.join(root, "game");
+  const put = (p, txt) => { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, txt); };
+  put(path.join(exe, "SkyrimSE.exe"), "exe");
+  put(path.join(data, "Data", "Skyrim.esm"), "esm");
+  put(path.join(data, "Data", "Skyrim - Interface.bsa"), "anglais");
+  put(path.join(lang, "Data", "Skyrim - Interface.bsa"), "francais");
+  put(path.join(data, "Data", "ccBGSSSE001-Fish.esm"), "cc"); // contenu payant : ignoré
+  const files = install.baseFilesFrom([lang, exe, data]).map((f) => f.rel).sort();
+  assert.deepStrictEqual(files, ["Data/Skyrim - Interface.bsa", "Data/Skyrim.esm", "SkyrimSE.exe"]);
+  const n = await install.moveBaseFilesFrom([lang, exe, data], game, () => {});
+  assert.strictEqual(n, 3);
+  assert.strictEqual(fs.readFileSync(path.join(game, "Data", "Skyrim - Interface.bsa"), "utf8"), "francais");
+  assert.strictEqual(fs.readFileSync(path.join(game, "SkyrimSE.exe"), "utf8"), "exe");
+  assert.ok(!fs.existsSync(path.join(exe, "SkyrimSE.exe"))); // déplacé, pas copié
+  fs.rmSync(root, { recursive: true, force: true });
+});
