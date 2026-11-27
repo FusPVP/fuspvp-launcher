@@ -1,0 +1,150 @@
+/* Launcher FusPvP - charte Skyrim : blanc sur noir, Montserrat Medium. */
+@font-face {
+  font-family: "FusPvP Montserrat";
+  src: url("fonts/Montserrat-Medium.ttf") format("truetype");
+  font-weight: 100 549;
+}
+@font-face {
+  font-family: "FusPvP Montserrat";
+  src: url("fonts/Montserrat-Bold.ttf") format("truetype");
+  font-weight: 550 900;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  color: #f2f0eb;
+  font-family: "FusPvP Montserrat", sans-serif;
+  font-weight: 500;
+  user-select: none;
+  overflow: hidden;
+}
+/* Léger halo central, comme le menu principal de Skyrim. */
+body {
+  background: radial-gradient(ellipse at 50% 35%, #1a1a1a 0%, #070707 55%, #000 100%);
+}
+
+/* Barre de titre (fenêtre sans cadre) */
+#titlebar {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 16px;
+  -webkit-app-region: drag;
+}
+#titlebar #version { letter-spacing: 0.1em; text-transform: none; margin-left: 6px; }
+#titlebar .brand { font-size: 12px; letter-spacing: 0.3em; text-transform: uppercase; opacity: 0.5; }
+.window-buttons { -webkit-app-region: no-drag; display: flex; }
+
+/* Menu du haut : réseaux sociaux */
+#topmenu { -webkit-app-region: no-drag; display: flex; gap: 4px; margin-left: auto; margin-right: 10px; }
+#topmenu .social {
+  display: flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px;
+  border: 1px solid transparent; border-radius: 3px; background: transparent; color: #b9b5ab;
+  font: inherit; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer;
+  transition: color .15s, background .15s, border-color .15s;
+}
+#topmenu .social svg { width: 15px; height: 15px; flex: none; }
+#topmenu .social:hover { color: #fff; background: #1c1c1c; border-color: #3a3a3a; }
+#topmenu .social.discord { color: #fff; background: #5865f2; }
+#topmenu .social.discord:hover { background: #4752c4; border-color: transparent; }
+.window-buttons button {
+  width: 46px; height: 34px; border: 0; background: transparent; color: #aaa;
+  font: inherit; font-size: 14px; cursor: pointer;
+}
+.window-buttons button:hover { background: #222; color: #fff; }
+#btn-close:hover { background: #8b1a1a; }
+
+.view { display: none; height: calc(100% - 34px); padding: 0 60px 28px; flex-direction: column; align-items: center; }
+.view.active { display: flex; }
+
+/* Accueil */
+#logo { width: 150px; height: 150px; margin-top: 6px; object-fit: contain; }
+h1, h2 {
+  margin: 4px 0 0;
+  font-weight: 500;
+  font-size: 30px;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  text-indent: 0.35em;
+}
+h2 { margin-top: 14px; font-size: 24px; }
+.tagline { margin: 6px 0 0; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.6; }
+
+/* Filet décoratif : ligne fine qui s'estompe, losange au centre. */
+.rule { position: relative; width: 520px; height: 14px; margin: 14px 0 12px; }
+.rule::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px;
+  background: linear-gradient(90deg, transparent, #bdb8ac 30%, #bdb8ac 70%, transparent);
+}
+.rule span {
+  position: absolute; left: 50%; top: 50%; width: 8px; height: 8px;
+  background: #000; border: 1px solid #bdb8ac; transform: translate(-50%, -50%) rotate(45deg);
+}
+
+#checks { list-style: none; padding: 0; margin: 0; width: 520px; }
+#checks li { display: flex; align-items: center; padding: 6px 0; font-size: 14px; border-bottom: 1px solid #1d1d1d; }
+#checks .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; margin-right: 12px; flex: none; }
+#checks .label { flex: none; width: 200px; letter-spacing: 0.05em; }
+#checks .value { flex: 1; text-align: right; opacity: 0.75; font-size: 13px; }
+#checks li.ok .dot { background: #d8d3c4; box-shadow: 0 0 6px #d8d3c4; }
+#checks li.warn .dot { background: #d9a441; }
+#checks li.err .dot { background: #b33a3a; }
+#checks li.busy .dot { background: #d8d3c4; animation: pulse 1s infinite alternate; }
+@keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
+
+#progress { width: 520px; margin-top: 14px; }
+#progress p { margin: 0; font-size: 13px; }
+#progress-detail { opacity: 0.6; font-size: 12px !important; margin-top: 6px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar { height: 4px; background: #222; margin-top: 8px; }
+#progress-fill { height: 100%; width: 0; background: #e8e4d8; box-shadow: 0 0 8px #e8e4d8; transition: width 0.15s linear; }
+
+#message { width: 620px; min-height: 36px; margin: 12px 0 0; text-align: center; font-size: 13px; line-height: 1.4; opacity: 0.85; }
+#message.error { color: #e07a6a; opacity: 1; }
+
+.actions { margin-top: auto; display: flex; gap: 22px; align-items: center; }
+
+button { font-family: inherit; font-weight: 500; }
+button.primary, button.secondary {
+  background: transparent; color: #f2f0eb; cursor: pointer; text-transform: uppercase;
+  letter-spacing: 0.25em; border: 1px solid #6d6a62; transition: all 0.15s;
+}
+button.primary { font-size: 20px; padding: 14px 64px; border-color: #bdb8ac; }
+button.secondary { font-size: 12px; padding: 10px 22px; }
+button.small { font-size: 11px; padding: 8px 14px; letter-spacing: 0.15em; }
+button.primary:hover:not(:disabled), button.secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06); border-color: #fff; text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+button:disabled { opacity: 0.3; cursor: default; }
+
+/* Paramètres */
+.columns { display: flex; gap: 60px; width: 100%; flex: 1; min-height: 0; }
+.columns section { flex: 1; overflow-y: auto; padding-right: 6px; }
+h3 {
+  font-weight: 500; font-size: 13px; letter-spacing: 0.25em; text-transform: uppercase;
+  margin: 14px 0 8px; padding-bottom: 6px; border-bottom: 1px solid #2a2a2a; opacity: 0.85;
+}
+label { display: block; font-size: 13px; margin: 8px 0; }
+label output { float: right; opacity: 0.7; }
+label.check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+select, input[type="text"] {
+  display: block; width: 100%; margin-top: 4px; padding: 6px 8px; background: #0d0d0d; color: #f2f0eb;
+  border: 1px solid #3a3a3a; font: inherit; font-size: 13px; outline: none;
+}
+select:focus, input[type="text"]:focus { border-color: #bdb8ac; }
+input[type="range"] { width: 100%; margin-top: 6px; accent-color: #d8d3c4; }
+input[type="checkbox"] { accent-color: #d8d3c4; }
+.hint { font-size: 11px; opacity: 0.55; margin: 4px 0 8px; line-height: 1.4; }
+.meter { height: 3px; background: #222; margin: -2px 0 10px; }
+#mic-level { height: 100%; width: 0; background: #7fbf7f; }
+.keybind { display: flex; align-items: center; justify-content: space-between; font-size: 13px; margin: 8px 0; }
+button.key {
+  min-width: 140px; padding: 6px 12px; background: #0d0d0d; color: #f2f0eb; border: 1px solid #3a3a3a;
+  cursor: pointer; font-size: 13px;
+}
+button.key.listening { border-color: #fff; animation: pulse 0.6s infinite alternate; }
+#account { font-size: 13px; margin: 6px 0 10px; }
+#display-fields.disabled { opacity: 0.35; pointer-events: none; }

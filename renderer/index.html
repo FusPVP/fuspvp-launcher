@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<!--
+  Launcher FusPvP - interface. Charte Skyrim : blanc sur fond noir, police
+  Montserrat (Medium), filets fins, titres en capitales espacées.
+  La logique est dans app.js ; les échanges avec le système passent par
+  window.fuspvp (preload.js).
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
+<title>FusPvP</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="titlebar">
+    <span class="brand">FusPvP <span id="version"></span></span>
+    <!-- Réseaux sociaux (ordre : Discord, YouTube, TikTok), ouverts dans le navigateur. -->
+    <nav id="topmenu">
+      <button class="social discord" data-link="discord" title="Rejoindre le Discord FusPvP"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.331c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg><span>Discord</span></button>
+      <button class="social" data-link="youtube" title="Chaîne YouTube FusPvP"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31.3 31.3 0 0 0 0 12a31.3 31.3 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31.3 31.3 0 0 0 24 12a31.3 31.3 0 0 0-.5-5.8zM9.6 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg><span>YouTube</span></button>
+      <button class="social" data-link="tiktok" title="TikTok FusPvP"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03a10.7 10.7 0 0 1-4.2-.97 12.4 12.4 0 0 1-1.62-.93c-.01 2.92.01 5.84-.02 8.75a7.64 7.64 0 0 1-1.35 3.94 7.45 7.45 0 0 1-5.91 3.21 7.3 7.3 0 0 1-4.08-1.03 7.54 7.54 0 0 1-3.65-5.71 15.5 15.5 0 0 1-.01-1.49 7.53 7.53 0 0 1 8.73-6.68c.02 1.48-.04 2.96-.04 4.44a3.43 3.43 0 0 0-4.38 2.12c-.21.51-.15 1.07-.14 1.61a3.38 3.38 0 0 0 6.27 1.26c.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg><span>TikTok</span></button>
+    </nav>
+    <div class="window-buttons">
+      <button id="btn-min" title="Réduire">&#8211;</button>
+      <button id="btn-close" title="Fermer">&#10005;</button>
+    </div>
+  </header>
+
+  <!-- Accueil -->
+  <main id="home" class="view active">
+    <img id="logo" src="logo.png" alt="FusPvP">
+    <h1>FusPvP</h1>
+    <p class="tagline">Serveur Skyrim PvP gratuit sans WL. Empire contre Sombrages</p>
+    <div class="rule"><span></span></div>
+
+    <ul id="checks">
+      <li id="chk-skyrim"><span class="dot"></span><span class="label">Skyrim Special Edition</span><span class="value"></span></li>
+      <li id="chk-game"><span class="dot"></span><span class="label">Fichiers FusPvP</span><span class="value"></span></li>
+      <li id="chk-server"><span class="dot"></span><span class="label">Serveur</span><span class="value"></span></li>
+      <li id="chk-discord"><span class="dot"></span><span class="label">Discord</span><span class="value"></span></li>
+    </ul>
+
+    <section id="progress" hidden>
+      <p id="progress-title"></p>
+      <div class="bar"><div id="progress-fill"></div></div>
+      <p id="progress-detail"></p>
+    </section>
+    <p id="message"></p>
+
+    <footer class="actions">
+      <button id="btn-settings" class="secondary">Paramètres</button>
+      <button id="btn-main" class="primary" disabled>Jouer</button>
+      <button id="btn-folder" class="secondary">Dossier du jeu</button>
+    </footer>
+  </main>
+
+  <!-- Paramètres -->
+  <main id="settings" class="view">
+    <h2>Paramètres</h2>
+    <div class="rule"><span></span></div>
+    <div class="columns">
+      <section>
+        <h3>Chat vocal</h3>
+        <label>Micro
+          <select id="set-input"></select>
+        </label>
+        <div class="meter"><div id="mic-level"></div></div>
+        <label>Sortie audio
+          <select id="set-output"></select>
+        </label>
+        <label>Volume du micro <output id="out-mic"></output>
+          <input type="range" id="set-mic" min="0" max="200" step="5">
+        </label>
+        <label>Volume des voix reçues <output id="out-voice"></output>
+          <input type="range" id="set-voice" min="0" max="200" step="5">
+        </label>
+        <h3>Touches FusPvP</h3>
+        <p class="hint">Les autres touches se règlent dans le jeu.</p>
+        <div class="keybind"><span>Parler (maintenir)</span><button id="key-talk" class="key"></button></div>
+        <div class="keybind"><span>Portée de la voix</span><button id="key-range" class="key"></button></div>
+      </section>
+      <section>
+        <h3>Affichage</h3>
+        <label class="check"><input type="checkbox" id="set-display-managed"> Régler l'affichage depuis le launcher</label>
+        <div id="display-fields">
+          <label>Résolution
+            <select id="set-resolution"></select>
+          </label>
+          <label>Mode
+            <select id="set-mode">
+              <option value="sansBordure">Plein écran sans bordure (recommandé)</option>
+              <option value="pleinEcran">Plein écran exclusif</option>
+              <option value="fenetre">Fenêtré</option>
+            </select>
+          </label>
+          <label>Qualité graphique
+            <select id="set-preset">
+              <option value="">Inchangée</option>
+              <option value="bas">Basse</option>
+              <option value="moyen">Moyenne</option>
+              <option value="haut">Haute</option>
+              <option value="ultra">Ultra</option>
+            </select>
+          </label>
+          <p class="hint">« Sans bordure » a le même rendu que le plein écran, sans risque d'écran noir au changement de fenêtre (alt+tab).</p>
+          <p class="hint">Ces réglages sont communs avec ton Skyrim normal (fichier SkyrimPrefs.ini, sauvegardé avant la première modification).</p>
+        </div>
+        <h3>Serveur</h3>
+        <label>Adresse du serveur
+          <input type="text" id="set-server" spellcheck="false">
+        </label>
+        <h3>Compte</h3>
+        <p id="account"></p>
+        <button id="btn-logout" class="secondary small">Se déconnecter de Discord</button>
+      </section>
+    </div>
+    <footer class="actions">
+      <button id="btn-back" class="secondary">Retour</button>
+      <button id="btn-save" class="primary">Enregistrer</button>
+    </footer>
+  </main>
+
+  <script src="keys.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

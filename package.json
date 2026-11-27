@@ -1,0 +1,43 @@
+{
+  "name": "fuspvp-launcher",
+  "version": "0.3.6",
+  "description": "Launcher FusPvP : installe, met à jour et lance Skyrim SE 1.6.1170 pour le serveur FusPvP",
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://fuspvp.org",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FusPVP/fuspvp-launcher.git"
+  },
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/",
+    "dist": "electron-builder --win portable"
+  },
+  "build": {
+    "appId": "fr.fuspvp.launcher",
+    "productName": "FusPvP",
+    "files": [
+      "main.js",
+      "preload.js",
+      "lib/**",
+      "renderer/**",
+      "launcher-config.json"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "renderer/icon.ico"
+    },
+    "portable": {
+      "artifactName": "FusPvP-Launcher.exe"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  }
+}
